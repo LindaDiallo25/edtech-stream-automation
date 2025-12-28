@@ -1,0 +1,97 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: db-init-script
+data:
+  init_edtech.sql: |
+    -- Table des étudiants
+    CREATE TABLE IF NOT EXISTS students (
+        student_id SERIAL PRIMARY KEY,
+        name VARCHAR(100),
+        classroom VARCHAR(50)
+    );
+
+    -- Table des leçons vidéo
+    CREATE TABLE IF NOT EXISTS lessons (
+        lesson_id SERIAL PRIMARY KEY,
+        title VARCHAR(200),
+        subject VARCHAR(100)
+    );
+
+    -- Table des logs de streaming (Données brutes)
+    CREATE TABLE IF NOT EXISTS streaming_logs (
+        log_id SERIAL PRIMARY KEY,
+        student_id INT REFERENCES students(student_id),
+        lesson_id INT REFERENCES lessons(lesson_id),
+        watch_time_seconds INT,
+        completion_percentage INT,
+        event_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Insertion de données initiales
+    INSERT INTO students (name, classroom) VALUES ('Mariama', 'Data_2025'), ('Boubacar', 'Data_2025');
+    INSERT INTO lessons (title, subject) VALUES ('Introduction à Docker', 'DevOps'), ('Maîtriser Airflow', 'Data Engineering');
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: db
+  template:
+    metadata:
+      labels:
+        app: db
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:13
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          value: edtech_db
+        - name: POSTGRES_USER
+          value: admin
+        - name: POSTGRES_PASSWORD
+          value: password
+        volumeMounts:
+        - name: postgres-data
+          mountPath: /var/lib/postgresql/data
+        - name: init-script
+          mountPath: /docker-entrypoint-initdb.d
+      volumes:
+      - name: postgres-data
+        persistentVolumeClaim:
+          claimName: postgres-data
+      - name: init-script
+        configMap:
+          name: db-init-script
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db-service
+spec:
+  selector:
+    app: db
+  ports:
+  - protocol: TCP
+    port: 5432
+    targetPort: 5432
+  type: ClusterIP
+

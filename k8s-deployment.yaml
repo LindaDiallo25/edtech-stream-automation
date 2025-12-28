@@ -1,3 +1,5 @@
+---
+# Simulator Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -6,11 +8,11 @@ spec:
   replicas: 2
   selector:
     matchLabels:
-      app: edtech-app
+      app: edtech-simulator
   template:
     metadata:
       labels:
-        app: edtech-app
+        app: edtech-simulator
     spec:
       containers:
       - name: simulator
@@ -19,3 +21,248 @@ spec:
         env:
         - name: DB_HOST
           value: "db-service"
+        - name: DB_NAME
+          value: "edtech_db"
+        - name: DB_USER
+          value: "admin"
+        - name: DB_PASS
+          value: "password"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+---
+# Simulator Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: simulator-service
+spec:
+  selector:
+    app: edtech-simulator
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+  type: ClusterIP
+---
+# Grafana Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+      - name: grafana
+        image: grafana/grafana:latest
+        ports:
+        - containerPort: 3000
+        env:
+        - name: GF_SECURITY_ADMIN_PASSWORD
+          value: "admin"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+# Grafana Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana-service
+spec:
+  selector:
+    app: grafana
+  ports:
+  - protocol: TCP
+    port: 3000
+    targetPort: 3000
+  type: LoadBalancer
+---
+# Airflow Database Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: airflow-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: airflow-db
+  template:
+    metadata:
+      labels:
+        app: airflow-db
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:13
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          value: airflow_db
+        - name: POSTGRES_USER
+          value: airflow
+        - name: POSTGRES_PASSWORD
+          value: airflow
+        volumeMounts:
+        - name: airflow-db-data
+          mountPath: /var/lib/postgresql/data
+      volumes:
+      - name: airflow-db-data
+        persistentVolumeClaim:
+          claimName: airflow-db-data
+---
+# Airflow Database Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: airflow-db-service
+spec:
+  selector:
+    app: airflow-db
+  ports:
+  - protocol: TCP
+    port: 5432
+    targetPort: 5432
+  type: ClusterIP
+---
+# Airflow Database PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: airflow-db-data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+# Airflow Scheduler Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: airflow-scheduler
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: airflow-scheduler
+  template:
+    metadata:
+      labels:
+        app: airflow-scheduler
+    spec:
+      containers:
+      - name: scheduler
+        image: apache/airflow:2.8.0
+        command: ["scheduler"]
+        env:
+        - name: AIRFLOW__CORE__EXECUTOR
+          value: "LocalExecutor"
+        - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
+          value: "postgresql+psycopg2://airflow:airflow@airflow-db-service/airflow_db"
+        - name: AIRFLOW__CORE__FERNET_KEY
+          value: ""
+        - name: AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION
+          value: "true"
+        - name: AIRFLOW__CORE__LOAD_EXAMPLES
+          value: "false"
+        - name: _PIP_ADDITIONAL_REQUIREMENTS
+          value: "psycopg2-binary"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "200m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+---
+# Airflow Webserver Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: airflow-webserver
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: airflow-webserver
+  template:
+    metadata:
+      labels:
+        app: airflow-webserver
+    spec:
+      containers:
+      - name: webserver
+        image: apache/airflow:2.8.0
+        command: ["webserver"]
+        ports:
+        - containerPort: 8080
+        env:
+        - name: AIRFLOW__CORE__EXECUTOR
+          value: "LocalExecutor"
+        - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
+          value: "postgresql+psycopg2://airflow:airflow@airflow-db-service/airflow_db"
+        - name: AIRFLOW__CORE__FERNET_KEY
+          value: ""
+        - name: AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION
+          value: "true"
+        - name: AIRFLOW__CORE__LOAD_EXAMPLES
+          value: "false"
+        - name: AIRFLOW__API__AUTH_BACKENDS
+          value: "airflow.api.auth.backend.basic_auth"
+        - name: AIRFLOW__WEBSERVER__EXPOSE_CONFIG
+          value: "true"
+        - name: _PIP_ADDITIONAL_REQUIREMENTS
+          value: "psycopg2-binary"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "200m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+---
+# Airflow Webserver Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: airflow-webserver-service
+spec:
+  selector:
+    app: airflow-webserver
+  ports:
+  - protocol: TCP
+    port: 8080
+    targetPort: 8080
+  type: LoadBalancer
