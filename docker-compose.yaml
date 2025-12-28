@@ -1,0 +1,37 @@
+services:
+  db:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: edtech_db
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+    volumes:
+      - ./sql/init_edtech.sql:/docker-entrypoint-initdb.d/init_edtech.sql
+    ports:
+      - "5432:5432"
+
+  simulator:
+    build: .
+    environment:
+      DB_HOST: db
+    depends_on:
+      - db
+
+  
+  airflow:
+    image: apache/airflow:2.7.1
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./dags:/opt/airflow/dags
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://admin:password@db/edtech_db
+
+
+  grafana:
+    image: grafana/grafana-oss:latest-alpine # Version ultra-légère
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db

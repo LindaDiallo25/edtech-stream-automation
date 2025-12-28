@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: edtech-simulator
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: edtech-app
+  template:
+    metadata:
+      labels:
+        app: edtech-app
+    spec:
+      containers:
+      - name: simulator
+        image: edtech-simulator:latest
+        imagePullPolicy: Never
+        env:
+        - name: DB_HOST
+          value: "db-service"
