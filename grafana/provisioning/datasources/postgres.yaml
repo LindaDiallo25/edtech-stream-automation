@@ -5,7 +5,7 @@ datasources:
     type: postgres
     uid: postgres-datasource
     access: proxy
-    url: db-service:5432
+    url: db:5432
     user: admin
     secureJsonData:
       password: password
