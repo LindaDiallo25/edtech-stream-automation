@@ -424,7 +424,4 @@ The ER diagram clearly shows the relationships between entities and supports the
 
 ---
 
-**Document Status:** Complete  
-**Last Updated:** January 2025  
-**Model Type:** Logical Data Model (ER Diagram) + Physical Data Model
 

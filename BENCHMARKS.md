@@ -463,7 +463,4 @@ The on-premise Kubernetes deployment provides a robust, scalable, and performant
 
 ---
 
-**Document Status:** Complete  
-**Last Updated:** January 2025  
-**Next Review:** As needed for performance optimization
 
