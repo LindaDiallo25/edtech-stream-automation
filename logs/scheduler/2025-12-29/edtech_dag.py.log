@@ -254,3 +254,10 @@
 [2025-12-29T01:35:19.582+0000] {logging_mixin.py:188} INFO - [2025-12-29T01:35:19.582+0000] {dag.py:3033} INFO - Sync 1 DAGs
 [2025-12-29T01:35:19.603+0000] {logging_mixin.py:188} INFO - [2025-12-29T01:35:19.602+0000] {dag.py:3820} INFO - Setting next_dagrun for edtech_analytics to 2025-12-29T00:00:00+00:00, run_after=2025-12-30T00:00:00+00:00
 [2025-12-29T01:35:19.618+0000] {processor.py:183} INFO - Processing /opt/airflow/dags/edtech_dag.py took 0.072 seconds
+[2025-12-29T01:35:49.673+0000] {processor.py:161} INFO - Started process (PID=317) to work on /opt/airflow/dags/edtech_dag.py
+[2025-12-29T01:35:49.673+0000] {processor.py:830} INFO - Processing file /opt/airflow/dags/edtech_dag.py for tasks to queue
+[2025-12-29T01:35:49.674+0000] {logging_mixin.py:188} INFO - [2025-12-29T01:35:49.673+0000] {dagbag.py:538} INFO - Filling up the DagBag from /opt/airflow/dags/edtech_dag.py
+[2025-12-29T01:35:49.686+0000] {processor.py:840} INFO - DAG(s) 'edtech_analytics' retrieved from /opt/airflow/dags/edtech_dag.py
+[2025-12-29T01:35:49.711+0000] {logging_mixin.py:188} INFO - [2025-12-29T01:35:49.711+0000] {dag.py:3033} INFO - Sync 1 DAGs
+[2025-12-29T01:35:49.739+0000] {logging_mixin.py:188} INFO - [2025-12-29T01:35:49.739+0000] {dag.py:3820} INFO - Setting next_dagrun for edtech_analytics to 2025-12-29T00:00:00+00:00, run_after=2025-12-30T00:00:00+00:00
+[2025-12-29T01:35:49.753+0000] {processor.py:183} INFO - Processing /opt/airflow/dags/edtech_dag.py took 0.084 seconds
