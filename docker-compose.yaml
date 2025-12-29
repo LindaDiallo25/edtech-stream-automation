@@ -82,9 +82,10 @@ services:
     environment:
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow_db/airflow_db
-      - AIRFLOW__CORE__FERNET_KEY=''
+      - AIRFLOW__CORE__FERNET_KEY="5U4u0Csw67u8MQXgqEFvL4jY41KWGe3C9PnXSQk3vo="
       - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=true
       - AIRFLOW__CORE__LOAD_EXAMPLES=false
+      - AIRFLOW_UID=1000
       - AIRFLOW__API__AUTH_BACKENDS=airflow.api.auth.backend.basic_auth
       - AIRFLOW__WEBSERVER__EXPOSE_CONFIG=true
       - _PIP_ADDITIONAL_REQUIREMENTS=psycopg2-binary
@@ -114,9 +115,10 @@ services:
     environment:
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow_db/airflow_db
-      - AIRFLOW__CORE__FERNET_KEY=''
+      - AIRFLOW__CORE__FERNET_KEY="5U4u0Csw67u8MQXgqEFvL4jY41KWGe3C9PnXSQk3vo="
       - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=true
       - AIRFLOW__CORE__LOAD_EXAMPLES=false
+      - AIRFLOW_UID=1000
       - AIRFLOW__API__AUTH_BACKENDS=airflow.api.auth.backend.basic_auth
       - _PIP_ADDITIONAL_REQUIREMENTS=psycopg2-binary
     volumes:
