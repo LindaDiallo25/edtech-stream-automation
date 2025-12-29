@@ -1,2 +1,6 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+logs/
+airflow_db/
+__pycache__/
+*.pyc
