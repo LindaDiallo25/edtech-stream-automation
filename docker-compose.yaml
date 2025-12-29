@@ -5,6 +5,8 @@ services:
   db:
     image: postgres:13
     container_name: edtech_db
+    ports:
+      - "5432:5432"
     environment:
       POSTGRES_DB: edtech_db
       POSTGRES_USER: admin

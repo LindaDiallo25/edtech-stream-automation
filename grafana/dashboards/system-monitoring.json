@@ -89,7 +89,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT pg_size_pretty(pg_database_size('edtech_db')) as db_size;",
+          "rawSql": "SELECT pg_database_size('edtech_db') as db_size;",
           "refId": "A"
         }
       ],
@@ -209,7 +209,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT date_trunc('second', current_timestamp - pg_postmaster_start_time()) as uptime;",
+          "rawSql": "SELECT EXTRACT(EPOCH FROM (now() - pg_postmaster_start_time())) as uptime;",
           "refId": "A"
         }
       ],
@@ -505,7 +505,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT date_trunc('minute', student_id::timestamp) as time, COUNT(*) as records FROM (SELECT student_id, (SELECT MIN(event_timestamp) FROM streaming_logs WHERE student_id = s.student_id) as created_at FROM students s) as student_times WHERE created_at >= $__timeFrom() AND created_at <= $__timeTo() GROUP BY time ORDER BY time;",
+          "rawSql": "SELECT $__timeGroupAlias(event_timestamp, 1m), count(*) as records FROM streaming_logs WHERE $__timeFilter(event_timestamp) GROUP BY 1 ORDER BY 1;",
           "refId": "A"
         }
       ],

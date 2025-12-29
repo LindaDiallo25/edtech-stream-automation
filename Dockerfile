@@ -9,4 +9,4 @@ RUN pip install --no-cache-dir psycopg2-binary
 WORKDIR /app
 COPY scripts/edtech_simulator.py .
 
-CMD ["python", "edtech_simulator.py"]
+CMD ["python", "scripts/edtech_simulator.py"]
