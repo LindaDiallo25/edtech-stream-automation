@@ -9,6 +9,7 @@ A containerized data simulation and analytics platform for educational streaming
 - **Grafana monitoring** configuration under `grafana/`
 - **Apache Airflow workflow** in `dags/edtech_dag.py` for daily analytics
 - **Docker Compose** environment for local development and testing
+- **Terraform** local provisioning for the Docker stack
 - **Kubernetes deployment** manifest in `k8s-deployment.yaml`
 
 ## 📁 Repository structure
@@ -40,6 +41,7 @@ edtech-stream-automation/
 
 - Docker
 - Docker Compose
+- Terraform 1.5+ (local execution)
 - (Optional) Kubernetes and `kubectl`
 
 ## 🛠️ Local setup with Docker Compose
@@ -127,6 +129,35 @@ The SQL initialization script creates:
 - `students` with `student_id`, `name`, and `classroom`
 - `lessons` with `lesson_id`, `title`, and `subject`
 - `streaming_logs` with references to `students` and `lessons`, plus watch time and completion percentage
+
+## 🧱 Local Terraform deployment
+
+Terraform can provision the local Docker-based stack from the `terraform/` directory.
+
+1. Initialize Terraform:
+
+```bash
+cd terraform
+terraform init
+```
+
+2. Review the plan:
+
+```bash
+terraform plan
+```
+
+3. Apply the stack:
+
+```bash
+terraform apply
+```
+
+4. Destroy the stack when finished:
+
+```bash
+terraform destroy
+```
 
 ## ☸️ Kubernetes deployment
 
