@@ -1,202 +1,176 @@
 # EdTech Stream Automation
 
-A comprehensive automation system for simulating and monitoring student streaming data in an educational technology platform. This project demonstrates containerized data streaming, database management, and analytics workflows using Docker, Kubernetes, PostgreSQL, and Apache Airflow.
+A containerized data simulation and analytics platform for educational streaming activity. This repository includes a PostgreSQL-backed simulator, Grafana monitoring, and an Airflow analytics DAG.
 
-## 🚀 Features
+## 🚀 What this project includes
 
-- **Real-time Data Simulation**: Python-based simulator that generates student streaming data continuously
-- **PostgreSQL Database**: Robust data storage for students, lessons, and streaming logs
-- **Grafana Monitoring**: Visual dashboards for monitoring teacher and student analytics
-- **Airflow Integration**: Automated daily analytics workflows for engagement metrics
-- **Containerized Architecture**: Docker Compose setup for easy local development
-- **Kubernetes Support**: Production-ready deployment configuration
+- **Python simulator** that creates student records and writes data into PostgreSQL
+- **PostgreSQL database** with `students`, `lessons`, and `streaming_logs` tables
+- **Grafana monitoring** configuration under `grafana/`
+- **Apache Airflow workflow** in `dags/edtech_dag.py` for daily analytics
+- **Docker Compose** environment for local development and testing
+- **Kubernetes deployment** manifest in `k8s-deployment.yaml`
+
+## 📁 Repository structure
+
+```
+edtech-stream-automation/
+├── ARCHITECTURE.md
+├── ARCHITECTURE_DIAGRAM.md
+├── BENCHMARKS.md
+├── DATA_MODEL.md
+├── Dockerfile
+├── README.md
+├── db-service.yaml
+├── docker-compose.yaml
+├── k8s-deployment.yaml
+├── dags/
+│   └── edtech_dag.py
+├── grafana/
+│   ├── dashboards/
+│   └── provisioning/
+├── logs/
+├── scripts/
+│   └── edtech_simulator.py
+└── sql/
+    └── init_edtech.sql
+```
 
 ## 📋 Prerequisites
 
-- [Docker](https://www.docker.com/get-started) (version 20.10 or higher)
-- [Docker Compose](https://docs.docker.com/compose/install/) (version 2.0 or higher)
-- [Kubernetes](https://kubernetes.io/docs/setup/) (optional, for production deployment)
+- Docker
+- Docker Compose
+- (Optional) Kubernetes and `kubectl`
 
-## 🏗️ Architecture
-
-The system consists of three main services:
-
-1. **PostgreSQL Database** (`db`): Stores student data, lessons, and streaming logs
-2. **EdTech Simulator** (`simulator`): Python service that continuously generates and inserts student data
-3. **Grafana** (`grafana`): Monitoring and visualization dashboard (accessible on port 3000)
-
-## 🛠️ Installation & Setup
-
-### Using Docker Compose (Recommended)
+## 🛠️ Local setup with Docker Compose
 
 1. Clone the repository:
+
 ```bash
-git clone https://github.com/yourusername/edtech-stream-automation.git
+git clone https://github.com/LindaDiallo25/edtech-stream-automation.git
 cd edtech-stream-automation
 ```
 
 2. Start all services:
+
 ```bash
 docker-compose up -d
 ```
 
-3. Verify services are running:
+3. Verify services:
+
 ```bash
 docker-compose ps
 ```
 
-### Access Services
+## 🌐 Services started by Docker Compose
 
-- **Grafana Dashboard**: http://localhost:3000
-  - Username: `admin`
-  - Password: `admin`
-- **PostgreSQL Database**: 
-  - Host: `localhost` (from host machine)
-  - Port: `5432` (if exposed)
+- `db`: PostgreSQL database for the EdTech dataset
+- `simulator`: Python simulator that inserts student records into PostgreSQL
+- `grafana`: Grafana dashboard service
+- `airflow_db`: PostgreSQL metadata database for Airflow
+- `redis`: Redis instance used by Airflow if needed
+- `airflow-webserver`: Airflow web UI on port `8080`
+- `airflow-scheduler`: Airflow scheduler running DAG tasks
+
+## 🔌 Access endpoints
+
+- Grafana: `http://localhost:3000`
+  - Admin password: `admin`
+- Airflow Webserver: `http://localhost:8080`
+- PostgreSQL: `localhost:5432`
   - Database: `edtech_db`
   - User: `admin`
   - Password: `password`
 
-## 📊 Database Schema
+## 📦 Key components
 
-The system uses the following tables:
+### `Dockerfile`
 
-- **students**: Stores student information (name, classroom)
-- **lessons**: Contains lesson metadata (title, subject)
-- **streaming_logs**: Records streaming events with watch time and completion percentage
+Builds the simulator image using Python 3.9 and installs `psycopg2-binary`.
 
-See `sql/init_edtech.sql` for the complete schema definition.
+### `docker-compose.yaml`
 
-## 🔄 How It Works
+Defines the full local stack:
+- PostgreSQL database for application data
+- Python simulator container
+- Grafana dashboard
+- Airflow metadata database
+- Redis
+- Airflow webserver and scheduler
 
-1. The **simulator** service connects to the PostgreSQL database
-2. Every 5 seconds, it randomly selects a student and classroom
-3. New student records are inserted into the `students` table
-4. Data is persisted and available for analytics
-5. **Grafana** can query and visualize this data in real-time
-6. **Airflow DAGs** run daily analytics on the collected data
+### `scripts/edtech_simulator.py`
 
-## 📁 Project Structure
+The simulator script:
+- connects to PostgreSQL
+- inserts random student records every 5 seconds
+- uses hardcoded student names and classroom values
 
-```
-edtech-stream-automation/
-├── docker-compose.yaml      # Docker Compose configuration
-├── Dockerfile               # Simulator container definition
-├── k8s-deployment.yaml      # Kubernetes deployment config
-├── dags/
-│   └── edtech_dag.py  # Airflow DAG for analytics
-├── scripts/
-│   └── edtech_simulator.py  # Main simulation script
-└── sql/
-    └── init_edtech.sql      # Database initialization script
-```
+### `dags/edtech_dag.py`
 
-## 🐳 Docker Services
+Daily Airflow DAG that:
+- analyzes student engagement
+- analyzes lesson completion
+- analyzes classroom performance
+- generates a daily report
 
-### Database Service
-- **Image**: `postgres:13`
-- **Container**: `edtech_db`
-- **Data Persistence**: Volume `postgres_data`
+### `sql/init_edtech.sql`
 
-### Simulator Service
-- **Image**: Built from local Dockerfile
-- **Container**: `edtech_simulator`
-- **Dependencies**: Waits for database to be ready
+Initial schema and seed data for:
+- `students`
+- `lessons`
+- `streaming_logs`
 
-### Grafana Service
-- **Image**: `grafana/grafana:latest`
-- **Container**: `edtech_grafana`
-- **Port**: `3000:3000`
+## 📊 Database schema
 
-## ☸️ Kubernetes Deployment
+The SQL initialization script creates:
+- `students` with `student_id`, `name`, and `classroom`
+- `lessons` with `lesson_id`, `title`, and `subject`
+- `streaming_logs` with references to `students` and `lessons`, plus watch time and completion percentage
 
-For production deployment using Kubernetes:
+## ☸️ Kubernetes deployment
+
+Apply the manifest with:
 
 ```bash
 kubectl apply -f k8s-deployment.yaml
 ```
 
-The deployment creates 2 replicas of the simulator service for high availability.
+This file includes deployments and services for the simulator, Grafana, Airflow database, scheduler, and webserver.
 
 ## 🔧 Configuration
 
-### Environment Variables
+Environment variables used by the simulator service in Docker Compose:
 
-The simulator uses the following environment variables (configured in `docker-compose.yaml`):
+- `DB_HOST=db`
+- `DB_NAME=edtech_db`
+- `DB_USER=admin`
+- `DB_PASS=password`
 
-- `DB_HOST`: Database hostname (default: `db`)
-- `DB_NAME`: Database name (default: `edtech_db`)
-- `DB_USER`: Database user (default: `admin`)
-- `DB_PASS`: Database password (default: `password`)
+## 🔄 Running and validating
 
-### Customization
-
-- **Simulation Interval**: Modify `time.sleep(5)` in `scripts/edtech_simulator.py` to change the data generation frequency
-- **Student Names**: Edit the `names` list in the simulator script
-- **Classrooms**: Modify the `classrooms` list to add/remove classes
-
-## 📈 Monitoring & Analytics
-
-### Grafana Dashboards
-
-The system includes a pre-configured **System Performance & Health Monitoring** dashboard that automatically loads when Grafana starts. The dashboard monitors:
-- Database connections and performance
-- Query performance metrics
-- Database size and health status
-- System uptime and active queries
-- Data ingestion rates
-- Table sizes and storage metrics
-
-### Airflow Analytics
-
-The included Airflow DAG (`edtech_dag.py`) runs daily to:
-- Calculate average completion rates
-- Analyze student engagement metrics
-- Generate reports for teachers
-
-## 🛑 Stopping the Services
-
-```bash
-docker-compose down
-```
-
-To remove volumes (⚠️ this will delete all data):
-```bash
-docker-compose down -v
-```
-
-## 🧪 Testing
-
-Check if the simulator is generating data:
+Check simulator logs:
 
 ```bash
 docker logs edtech_simulator
 ```
 
-Query the database directly:
+Query the database:
 
 ```bash
 docker exec -it edtech_db psql -U admin -d edtech_db -c "SELECT COUNT(*) FROM students;"
 ```
 
+## 🧪 Notes
+
+- `docker-compose.yaml` currently also mounts `./plugins` for Airflow, which is expected to be created by Docker if missing.
+- The simulator inserts students directly into `students`; the `streaming_logs` table is currently defined but populated only by future workflow enhancements.
+
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome. Open a pull request with improvements, bug fixes, or documentation updates.
 
-## 📝 License
+## 📜 License
 
-This project is open source and available under the [MIT License](LICENSE).
-
-## 👥 Authors
-
-Dalanda
-
-## 🙏 Acknowledgments
-
-- Built for educational purposes
-- Demonstrates modern DevOps and data engineering practices
-
----
-
-**Note**: This is a simulation system for educational purposes. For production use, ensure proper security configurations, especially for database credentials and network access.
+This repository does not include a license file in the current tree.
 
