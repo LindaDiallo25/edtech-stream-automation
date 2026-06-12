@@ -1,429 +1,375 @@
 # Architecture Requirements Document
 ## EdTech Stream Automation Platform
 
-**Project:** EdTech Stream Automation  
+**Project:** EdTech Stream Automation
 **Deployment Environment:** **On-Premise**
 
 ---
 
 ## 1. Executive Summary
 
-This document outlines the architecture requirements for the EdTech Stream Automation platform, a data infrastructure system designed to simulate, collect, store, and analyze student streaming data in an educational technology environment. The system provides real-time data simulation, persistent storage, automated analytics workflows, and comprehensive monitoring capabilities.
+This document describes the architecture of the EdTech Stream Automation platform, an on-premise data infrastructure solution for educational streaming analytics. The platform simulates student streaming behavior, captures engagement events, stores data in PostgreSQL, runs automated analytics with Apache Airflow, and provides observability through Grafana and Prometheus.
 
-**Deployment Environment:** This infrastructure is designed for **on-premise deployment**, running on local servers, private data centers, or organizational infrastructure. The system uses containerization (Docker) and orchestration (Kubernetes) technologies that are deployed and managed within the organization's own infrastructure, providing full control over data, security, and resource management.
+**Deployment Approach:**
+- **Development:** Docker Compose for local testing and rapid iteration
+- **Production:** Kubernetes on on-premise infrastructure
+- **Optional Infrastructure Provisioning:** Terraform example for AWS EC2
 
 ---
 
-## 2. Business Context & Needs
+## 2. Business Objectives
 
-### 2.1 Business Objectives
-
-The EdTech Stream Automation platform serves the following business needs:
+### 2.1 Goals
 
 1. **Data Collection & Simulation**
-   - Simulate realistic student streaming behavior for testing and development
-   - Generate continuous data streams to test system scalability
-   - Support multiple classrooms and student cohorts
+   - Generate realistic student streaming events for analytics
+   - Maintain continuous data ingestion
+   - Support multiple classrooms and lesson types
 
 2. **Analytics & Reporting**
-   - Provide daily automated analytics on student engagement
-   - Track lesson completion rates and classroom performance
-   - Generate insights for educators and administrators
+   - Execute scheduled analytics workflows daily
+   - Track lesson completion and student engagement
+   - Provide insights for educators and administrators
 
-3. **System Monitoring**
-   - Monitor system health and performance in real-time
-   - Track database performance and resource utilization
-   - Ensure system reliability and availability
+3. **Monitoring & Reliability**
+   - Measure service health and performance in real time
+   - Alert on critical failures and resource issues
+   - Ensure operational stability across the infrastructure
 
-4. **Scalability & Growth**
-   - Support increasing numbers of students and streaming events
-   - Handle growing data volumes without performance degradation
-   - Enable horizontal scaling for production workloads
+4. **Scalability & Maintainability**
+   - Scale simulation horizontally
+   - Enable repeatable deployments with infrastructure as code
+   - Keep the architecture easy to extend and maintain
 
 ### 2.2 Stakeholders
 
-- **Educators**: Need insights into student engagement and lesson effectiveness
-- **Administrators**: Require system health monitoring and performance metrics
-- **Data Engineers**: Need reliable data pipelines and orchestration
-- **Developers**: Require easy deployment and testing environments
+- **Educators:** Need engagement metrics and lesson effectiveness reports
+- **Administrators:** Require monitoring and reliability controls
+- **Data Engineers:** Need reliable pipelines, storage, and analytics automation
+- **Developers:** Need simple deployment, monitoring, and observability
 
 ---
 
-## 3. Technical Constraints
+## 3. Architecture Overview
 
-### 3.1 Infrastructure Constraints
+The system is designed as a modular container-based platform with the following layers:
 
-1. **Containerization Requirement**
-   - All services must be containerized using Docker
-   - Support for both Docker Compose (development) and Kubernetes (production)
-   - Images must be lightweight and optimized
+- **Data Layer:** PostgreSQL for application and metadata storage
+- **Ingestion Layer:** Simulator container generating streaming events
+- **Orchestration Layer:** Apache Airflow for scheduled analytics workflows
+- **Observability Layer:** Grafana dashboards and Prometheus metrics
+- **Infrastructure Layer:** Docker Compose for local use, Kubernetes for production
 
-2. **Database Constraints**
-   - PostgreSQL 13+ required for ACID compliance and relational data integrity
-   - Database must support concurrent connections from multiple services
-   - Data persistence required across container restarts
-
-3. **Network Constraints**
-   - Services must communicate over isolated Docker networks
-   - External access limited to specific ports (Grafana: 3000, Airflow: 8080)
-   - Database access restricted to internal network only
-
-4. **Resource Constraints**
-   - Memory: Minimum 4GB RAM for full stack deployment
-   - CPU: Multi-core support for parallel processing
-   - Storage: Persistent volumes for database and logs
-
-### 3.2 Technology Stack Constraints
-
-1. **Programming Language**
-   - Python 3.9+ for simulator and Airflow DAGs
-   - SQL for database operations and analytics
-
-2. **Orchestration**
-   - Apache Airflow 2.8.0+ for workflow automation
-   - Kubernetes for production orchestration
-   - Docker Compose for local development
-
-3. **Monitoring**
-   - Grafana for visualization and dashboards
-   - PostgreSQL system tables for database metrics
-   - Built-in health checks for service monitoring
-
-### 3.3 Performance Constraints
-
-1. **Data Ingestion**
-   - Simulator must generate data every 5 seconds
-   - Database must handle concurrent inserts without blocking
-   - System must support at least 1000+ students
-
-2. **Query Performance**
-   - Analytics queries must complete within acceptable timeframes
-   - Dashboard queries must be optimized for real-time display
-   - Database indexes required for frequently queried columns
-
-3. **Availability**
-   - System uptime target: 99.5%
-   - Database must support automatic failover (Kubernetes)
-   - Services must restart automatically on failure
+Key design principles:
+- **Containerization:** All services run in containers for consistency
+- **Separation of concerns:** Each component has a focused responsibility
+- **Observability:** Monitoring and alerts are integral to the architecture
+- **On-premise deployment:** Designed to run inside private infrastructure without cloud dependency
 
 ---
 
-## 4. Operational Requirements
+## 4. Architecture Diagrams
 
-### 4.1 Deployment Requirements
+### 4.1 High-Level Architecture
 
-1. **Development Environment (On-Premise)**
-   - Single-command deployment using Docker Compose on local machines or development servers
-   - Automatic service dependency management
-   - Hot-reload support for code changes (DAGs, scripts)
-   - Runs entirely within organizational network
+```mermaid
+graph TB
+    subgraph "On-Premise Infrastructure"
+        subgraph "Kubernetes Cluster"
+            subgraph "Data Layer"
+                DB[(PostgreSQL<br/>Database<br/>edtech_db)]
+                AIRFLOW_DB[(PostgreSQL<br/>Airflow Metadata)]
+            end
+            
+            subgraph "Application Layer"
+                SIM1[Simulator<br/>Replica 1]
+                SIM2[Simulator<br/>Replica 2]
+            end
+            
+            subgraph "Orchestration Layer"
+                AIRFLOW_WS[Airflow<br/>Webserver<br/>:8080]
+                AIRFLOW_SCHED[Airflow<br/>Scheduler]
+            end
+            
+            subgraph "Monitoring Layer"
+                GRAFANA[Grafana<br/>Dashboard<br/>:3000]
+            end
+        end
+        
+        subgraph "External Access"
+            USER[Users/Administrators]
+        end
+    end
+    
+    SIM1 -->|Insert Data| DB
+    SIM2 -->|Insert Data| DB
+    AIRFLOW_SCHED -->|Read/Analyze| DB
+    GRAFANA -->|Query Metrics| DB
+    AIRFLOW_WS -->|Metadata| AIRFLOW_DB
+    AIRFLOW_SCHED -->|Metadata| AIRFLOW_DB
+    USER -->|Access Dashboard| GRAFANA
+    USER -->|Access UI| AIRFLOW_WS
+    
+    style DB fill:#336791,stroke:#fff,color:#fff
+    style AIRFLOW_DB fill:#336791,stroke:#fff,color:#fff
+    style SIM1 fill:#4CAF50,stroke:#fff,color:#fff
+    style SIM2 fill:#4CAF50,stroke:#fff,color:#fff
+    style GRAFANA fill:#F46800,stroke:#fff,color:#fff
+    style AIRFLOW_WS fill:#017CEE,stroke:#fff,color:#fff
+    style AIRFLOW_SCHED fill:#017CEE,stroke:#fff,color:#fff
+```
 
-2. **Production Environment (On-Premise)**
-   - Kubernetes cluster deployed on organizational infrastructure
-   - High availability with multiple replicas for simulator service (2+)
-   - Resource limits and requests for all containers
-   - Persistent storage for databases using local storage or network-attached storage (NAS)
-   - All services run within private network, no external cloud dependencies
+### 4.2 Detailed Component Architecture
 
-3. **Configuration Management**
-   - Environment variables for all service configurations
-   - Secrets management for sensitive data (passwords, keys)
-   - ConfigMaps for non-sensitive configuration
+```mermaid
+graph LR
+    subgraph "On-Premise Kubernetes Cluster"
+        subgraph "Namespace: default"
+            subgraph "Database Services"
+                DB_POD[PostgreSQL Pod<br/>Container: postgres:13<br/>Volume: postgres-data]
+                DB_SVC[db-service<br/>ClusterIP:5432]
+            end
+            
+            subgraph "Simulator Services"
+                SIM_POD1[Simulator Pod 1<br/>Container: edtech-simulator<br/>Replica 1]
+                SIM_POD2[Simulator Pod 2<br/>Container: edtech-simulator<br/>Replica 2]
+                SIM_SVC[simulator-service<br/>ClusterIP:80]
+            end
+            
+            subgraph "Airflow Services"
+                AF_WS_POD[Airflow Webserver Pod<br/>Container: apache/airflow:2.8.0<br/>Port: 8080]
+                AF_SCHED_POD[Airflow Scheduler Pod<br/>Container: apache/airflow:2.8.0]
+                AF_DB_POD[Airflow DB Pod<br/>Container: postgres:13<br/>Volume: airflow-db-data]
+                AF_WS_SVC[airflow-webserver-service<br/>LoadBalancer:8080]
+            end
+            
+            subgraph "Monitoring Services"
+                GRAFANA_POD[Grafana Pod<br/>Container: grafana/grafana<br/>Port: 3000]
+                GRAFANA_SVC[grafana-service<br/>LoadBalancer:3000]
+            end
+        end
+    end
+    
+    SIM_POD1 -->|INSERT students| DB_POD
+    SIM_POD2 -->|INSERT students| DB_POD
+    SIM_POD1 -.->|via| DB_SVC
+    SIM_POD2 -.->|via| DB_SVC
+    
+    AF_SCHED_POD -->|SELECT/ANALYZE| DB_POD
+    AF_SCHED_POD -.->|via| DB_SVC
+    AF_WS_POD -->|Metadata| AF_DB_POD
+    AF_SCHED_POD -->|Metadata| AF_DB_POD
+    
+    GRAFANA_POD -->|Query Metrics| DB_POD
+    GRAFANA_POD -.->|via| DB_SVC
+    
+    style DB_POD fill:#336791,stroke:#fff,color:#fff
+    style AF_DB_POD fill:#336791,stroke:#fff,color:#fff
+    style SIM_POD1 fill:#4CAF50,stroke:#fff,color:#fff
+    style SIM_POD2 fill:#4CAF50,stroke:#fff,color:#fff
+    style GRAFANA_POD fill:#F46800,stroke:#fff,color:#fff
+    style AF_WS_POD fill:#017CEE,stroke:#fff,color:#fff
+    style AF_SCHED_POD fill:#017CEE,stroke:#fff,color:#fff
+```
 
-### 4.2 Monitoring & Observability
+### 4.3 Data Flow Architecture
 
-1. **System Monitoring**
-   - Real-time dashboard for system performance metrics
-   - Database connection monitoring
-   - Query performance tracking
-   - Resource utilization monitoring
+```mermaid
+sequenceDiagram
+    participant S1 as Simulator Replica 1
+    participant S2 as Simulator Replica 2
+    participant DB as PostgreSQL Database
+    participant AF as Airflow Scheduler
+    participant GRAF as Grafana
+    participant USER as Administrator
+    
+    Note over S1,S2: Continuous Data Ingestion
+    loop Every 5 seconds
+        S1->>DB: INSERT student record
+        S2->>DB: INSERT student record
+    end
+    
+    Note over AF: Daily Analytics (Scheduled)
+    AF->>DB: SELECT students, streaming_logs
+    AF->>DB: Calculate engagement metrics
+    AF->>DB: Generate daily report
+    
+    Note over GRAF,USER: Real-time Monitoring
+    USER->>GRAF: Access Dashboard
+    GRAF->>DB: Query system metrics
+    DB-->>GRAF: Return performance data
+    GRAF-->>USER: Display metrics
+```
 
-2. **Health Checks**
-   - Health endpoints for all services
-   - Automatic service restart on failure
-   - Database connection health monitoring
+### 4.4 Network Architecture
 
-3. **Logging**
-   - Centralized logging for all services
-   - Log retention for troubleshooting
-   - Error tracking and alerting
+```mermaid
+graph TB
+    subgraph "On-Premise Network"
+        subgraph "Kubernetes Internal Network"
+            subgraph "ClusterIP Services"
+                DB_SVC[db-service:5432<br/>Internal Only]
+                SIM_SVC[simulator-service:80<br/>Internal Only]
+            end
+            
+            subgraph "LoadBalancer Services"
+                GRAF_SVC[grafana-service:3000<br/>External Access]
+                AF_SVC[airflow-webserver-service:8080<br/>External Access]
+            end
+        end
+        
+        subgraph "External Access"
+            EXT_USER[Users/Administrators<br/>Internal Network]
+        end
+    end
+    
+    EXT_USER -->|HTTP :3000| GRAF_SVC
+    EXT_USER -->|HTTP :8080| AF_SVC
+    
+    DB_SVC -.->|Blocked| EXT_USER
+    SIM_SVC -.->|Blocked| EXT_USER
+    
+    style DB_SVC fill:#ff6b6b,stroke:#fff,color:#fff
+    style SIM_SVC fill:#ff6b6b,stroke:#fff,color:#fff
+    style GRAF_SVC fill:#51cf66,stroke:#fff,color:#fff
+    style AF_SVC fill:#51cf66,stroke:#fff,color:#fff
+```
 
-### 4.3 Maintenance & Operations
+### 4.5 Deployment Architecture
 
-1. **Backup & Recovery**
-   - Database backup strategy
-   - Volume persistence for data retention
-   - Disaster recovery procedures
-
-2. **Updates & Upgrades**
-   - Zero-downtime deployment capability
-   - Rolling updates for Kubernetes deployments
-   - Version control for all configurations
-
-3. **Scaling**
-   - Horizontal scaling support for simulator service
-   - Database scaling considerations
-   - Load balancing for multiple instances
+```mermaid
+graph TB
+    subgraph "On-Premise Infrastructure"
+        subgraph "Development Environment"
+            DC[Docker Compose<br/>Local Development]
+            DC_DB[(PostgreSQL)]
+            DC_SIM[Simulator]
+            DC_GRAF[Grafana]
+            DC_AF[Airflow]
+        end
+        
+        subgraph "Production Environment"
+            K8S[Kubernetes Cluster<br/>On-Premise]
+            K8S_DB[(PostgreSQL<br/>Persistent Volume)]
+            K8S_SIM[Simulator<br/>2 Replicas]
+            K8S_GRAF[Grafana<br/>1 Replica]
+            K8S_AF[Airflow<br/>Webserver + Scheduler]
+        end
+    end
+    
+    DC --> DC_DB
+    DC --> DC_SIM
+    DC --> DC_GRAF
+    DC --> DC_AF
+    K8S --> K8S_DB
+    K8S --> K8S_SIM
+    K8S --> K8S_GRAF
+    K8S --> K8S_AF
+    
+    style DC fill:#ffd43b,stroke:#000
+    style K8S fill:#4CAF50,stroke:#fff,color:#fff
+```
 
 ---
 
-## 5. Regulatory & Compliance Considerations
+## 5. System Components
 
-### 5.1 Data Privacy
-
-1. **Student Data Protection**
-   - Simulated data only (no real student information)
-   - Data encryption at rest (database volumes)
-   - Access control and authentication
-
-2. **Data Retention**
-   - Configurable data retention policies
-   - Compliance with educational data regulations
-   - Secure data deletion procedures
-
-### 5.2 Security Requirements
-
-1. **Authentication & Authorization**
-   - Database user authentication
-   - Grafana admin access control
-   - Airflow user management
-
-2. **Network Security**
-   - Internal service communication only
-   - Firewall rules for external access
-   - No exposed database ports externally
-
-3. **Secrets Management**
-   - No hardcoded passwords in code
-   - Environment variables for sensitive data
-   - Kubernetes Secrets for production
-
-### 5.3 Audit & Compliance
-
-1. **Audit Logging**
-   - Database access logging
-   - Service operation logs
-   - User activity tracking (if applicable)
-
-2. **Compliance Standards**
-   - Follow containerization best practices
-   - Adhere to data engineering standards
-   - Document all architectural decisions
-
----
-
-## 6. Design Choices & Rationale
-
-### 6.1 Architecture Pattern
-
-**Choice:** Microservices architecture with containerization
-
-**Rationale:**
-- **Separation of Concerns**: Each service (database, simulator, Grafana, Airflow) has a single responsibility
-- **Scalability**: Individual services can be scaled independently
-- **Technology Flexibility**: Each service can use optimal technology stack
-- **Fault Isolation**: Failure in one service doesn't cascade to others
-
-### 6.2 Database Selection
-
-**Choice:** PostgreSQL 13
-
-**Rationale:**
-- **ACID Compliance**: Ensures data integrity for student records and streaming logs
-- **Relational Model**: Natural fit for structured educational data (students, lessons, logs)
-- **Performance**: Excellent query performance for analytics workloads
-- **Maturity**: Proven reliability and extensive tooling support
-- **Open Source**: No licensing costs, community support
-
-### 6.3 Orchestration Platform
-
-**Choice:** Apache Airflow 2.8.0
-
-**Rationale:**
-- **Workflow Automation**: Perfect for scheduled daily analytics tasks
-- **Python-based**: Easy integration with existing Python codebase
-- **DAG-based**: Visual representation of workflow dependencies
-- **Extensibility**: Rich ecosystem of operators and integrations
-- **Monitoring**: Built-in UI for workflow monitoring and debugging
-
-### 6.4 Monitoring Solution
-
-**Choice:** Grafana with PostgreSQL datasource
-
-**Rationale:**
-- **Visualization**: Rich dashboard capabilities for system metrics
-- **Real-time Monitoring**: Live updates of system performance
-- **PostgreSQL Integration**: Direct connection to database for metrics
-- **Provisioning**: Automated dashboard and datasource configuration
-- **Open Source**: No licensing costs, active community
-
-### 6.5 Containerization Strategy
-
-**Choice:** Docker for containers, Docker Compose for development, Kubernetes for production (On-Premise)
-
-**Rationale:**
-- **On-Premise Deployment**: All containers run on organizational infrastructure
-- **Development**: Docker Compose provides simple, single-command deployment on local machines
-- **Production**: On-premise Kubernetes cluster offers orchestration, scaling, and high availability
-- **Portability**: Containers run consistently across on-premise environments
-- **Isolation**: Each service runs in isolated container environment
-- **Industry Standard**: Widely adopted, extensive tooling and support
-- **No Cloud Dependencies**: Entire stack runs within organizational network
-
-### 6.6 Data Flow Architecture
-
-**Choice:** Event-driven data ingestion with batch analytics
-
-**Rationale:**
-- **Real-time Ingestion**: Simulator continuously generates and inserts data
-- **Batch Processing**: Airflow DAGs run daily for comprehensive analytics
-- **Separation**: Real-time data collection separate from batch analytics
-- **Scalability**: Can handle high ingestion rates while processing analytics separately
-- **Reliability**: Batch processing ensures complete data analysis
-
-### 6.7 Deployment Strategy
-
-**Choice:** On-Premise deployment with Docker Compose (development) and Kubernetes (production)
-
-**Rationale:**
-- **On-Premise Control**: Full control over infrastructure, data, and security within organizational boundaries
-- **Development**: Docker Compose for rapid iteration and testing on local machines or development servers
-- **Production**: Kubernetes cluster deployed on-premise for scalability, reliability, and resource management
-- **Data Sovereignty**: All data remains within organizational infrastructure, meeting compliance and security requirements
-- **Cost Management**: No cloud provider costs, predictable infrastructure expenses
-- **Network Security**: Internal network isolation, no external dependencies
-- **Consistency**: Same container images across development and production environments
-- **Learning**: Demonstrates both development and production deployment patterns in on-premise context
-
----
-
-## 7. System Components
-
-### 7.1 Core Services
+### 5.1 Core Services
 
 1. **PostgreSQL Database**
    - Stores: students, lessons, streaming_logs
-   - Purpose: Persistent data storage and analytics queries
-   - Port: 5432 (internal only)
+   - Purpose: persistent storage and analytics queries
+   - Access: internal network only
 
 2. **EdTech Simulator**
-   - Generates: Student enrollment data
-   - Frequency: Every 5 seconds
-   - Purpose: Continuous data stream simulation
+   - Generates: student and streaming event records
+   - Frequency: every 5 seconds
+   - Purpose: continuous ingestion for analytics testing
 
 3. **Apache Airflow**
-   - Components: Webserver, Scheduler, Database
-   - Purpose: Automated workflow orchestration
-   - Schedule: Daily analytics DAG execution
+   - Components: webserver, scheduler, metadata database
+   - Purpose: orchestrates analytics DAGs and reporting
+   - Schedule: daily job execution
 
 4. **Grafana**
-   - Purpose: System performance and health monitoring
-   - Port: 3000 (external access)
-   - Dashboards: System metrics, database health
+   - Purpose: visualization and dashboard monitoring
+   - Port: 3000
+   - Includes: pre-provisioned dashboards and datasources
 
-### 7.2 Data Model
+5. **Prometheus**
+   - Purpose: metric collection and alert evaluation
+   - Port: 9090
+   - Scrapes: PostgreSQL, Airflow, Docker, and self metrics
 
-**Logical Structure:**
-- **Students**: Student information and classroom assignment
-- **Lessons**: Educational content metadata
-- **Streaming Logs**: Student engagement events with timestamps
-
-**Relationships:**
-- Streaming logs reference students (many-to-one)
-- Streaming logs reference lessons (many-to-one)
-- Enables analytics across students, lessons, and time
+6. **Terraform / AWS EC2**
+   - Purpose: optional infrastructure provisioning example
+   - Deploys: single EC2 instance with Docker bootstrap
 
 ---
 
-## 8. Non-Functional Requirements
+## 6. Non-Functional Requirements
 
-### 8.1 Performance
+### 6.1 Performance
 
-- **Data Ingestion**: Support 12+ records per minute (1 every 5 seconds)
-- **Query Response**: Dashboard queries < 2 seconds
-- **Analytics Processing**: Daily DAG execution < 5 minutes
+- Support at least 12 records per minute per simulator replica
+- Maintain dashboard queries under 2 seconds
+- Complete analytics DAG runs within 5 minutes
 
-### 8.2 Scalability
+### 6.2 Scalability
 
-- **Horizontal Scaling**: Simulator service supports multiple replicas
-- **Database Scaling**: Vertical scaling via resource allocation
-- **Load Distribution**: Kubernetes handles load balancing
+- Support horizontal scaling of simulator replicas
+- Provide database scaling options through resource allocation
+- Use Kubernetes load balancing for production services
 
-### 8.3 Reliability
+### 6.3 Reliability
 
-- **Uptime Target**: 99.5% availability
-- **Fault Tolerance**: Automatic service restart on failure
-- **Data Persistence**: Persistent volumes prevent data loss
+- Target 99.5% uptime
+- Restart failed containers automatically
+- Preserve data with persistent volumes
 
-### 8.4 Maintainability
+### 6.4 Maintainability
 
-- **Documentation**: Comprehensive README and architecture docs
-- **Code Quality**: Clean, commented, and organized codebase
-- **Configuration**: Environment-based configuration management
-
----
-
-## 9. Risk Assessment & Mitigation
-
-### 9.1 Identified Risks
-
-1. **Database Failure**
-   - Risk: Data loss or service unavailability
-   - Mitigation: Persistent volumes, automatic restarts, regular backups
-
-2. **High Data Volume**
-   - Risk: Performance degradation with large datasets
-   - Mitigation: Database indexing, query optimization, horizontal scaling
-
-3. **Service Dependencies**
-   - Risk: Cascade failures if dependencies fail
-   - Mitigation: Health checks, graceful degradation, retry logic
-
-4. **Resource Exhaustion**
-   - Risk: Out of memory or CPU constraints
-   - Mitigation: Resource limits, monitoring, auto-scaling
-
-### 9.2 Security Risks
-
-1. **Exposed Credentials**
-   - Risk: Hardcoded passwords in code
-   - Mitigation: Environment variables, Kubernetes Secrets
-
-2. **Network Exposure**
-   - Risk: Unauthorized database access
-   - Mitigation: Internal networks only, no external database ports
+- Document architecture and deployment clearly
+- Keep code modular and easy to extend
+- Use environment variables for configuration
 
 ---
 
-## 10. Future Considerations
+## 7. Risk Assessment & Mitigation
 
-### 10.1 Potential Enhancements
+### 7.1 Infrastructure Risks
 
-1. **Real-time Analytics**: Stream processing with Kafka or similar
-2. **Advanced Monitoring**: Prometheus + Node Exporter for system metrics
-3. **Data Warehouse**: Separate analytics database for reporting
-4. **API Layer**: REST API for external integrations
-5. **Authentication**: OAuth/JWT for secure access
+- **Database failure**: use persistent volumes and restart policies
+- **High data volume**: apply indexes and optimize queries
+- **Dependency failure**: implement health checks and retries
+- **Resource exhaustion**: set limits and monitor usage
 
-### 10.2 Scalability Path
+### 7.2 Security Risks
 
-1. **Short-term**: Optimize queries, add database indexes
-2. **Medium-term**: Implement read replicas, caching layer
-3. **Long-term**: Data partitioning, distributed database architecture
+- **Exposed credentials**: avoid hardcoded passwords and use environment variables
+- **Network exposure**: lock down internal services and limit external ports
 
 ---
 
-## 11. Conclusion
+## 8. Future Considerations
 
-This architecture provides a robust, scalable, and maintainable foundation for the EdTech Stream Automation platform. The design choices prioritize:
-
-- **Simplicity**: Easy to understand and deploy
-- **Reliability**: High availability and fault tolerance
-- **Scalability**: Support for growth and increased load
-- **Observability**: Comprehensive monitoring and logging
-- **Maintainability**: Clean code and clear documentation
-
-The architecture meets all technical, operational, and regulatory requirements while providing a solid foundation for future enhancements.
+- Add real-time stream processing with Kafka or similar
+- Extend monitoring with node_exporter and alertmanager
+- Add a separate analytics warehouse for reporting
+- Implement API access for external integrations
+- Add stronger authentication and authorization
 
 ---
 
+## 9. Conclusion
+
+This architecture document now combines requirements, design decisions, diagrams, and deployment patterns for the EdTech Stream Automation platform. The solution supports a full on-premise deployment model with Docker Compose for development and Kubernetes for production, while preserving a strong focus on observability, scalability, and maintainability.
+
+The design supports:
+- **Reliable data ingestion**
+- **Daily analytics workflows**
+- **Monitoring and alerting**
+- **Scalable on-premise deployment**
+- **Clear separation between development and production environments**
+
+This architecture is ready to support the current project requirements and future growth.

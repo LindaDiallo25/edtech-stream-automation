@@ -1,13 +1,13 @@
 # Docker Deployment
 
-This directory contains Docker Compose and Dockerfile for the EdTech Stream Automation platform.
+This directory contains Docker Compose and Dockerfile support for the EdTech Stream Automation platform.
 
-## Files
+## What is included
 
-- `Dockerfile`: Builds the simulator image from Python 3.9-slim with psycopg2-binary
-- `docker-compose.yaml`: Orchestrates all local development services
+- `Dockerfile`: Builds the simulator image from Python 3.9-slim with `psycopg2-binary`
+- `docker-compose.yaml`: Orchestrates the local development stack
 
-## Quick Start
+## Quick start
 
 From the repository root:
 
@@ -22,23 +22,24 @@ cd docker
 docker-compose -f docker-compose.yaml up -d
 ```
 
-## Services
+## Services included
 
-- PostgreSQL (edtech_db) on port 5432
-- Simulator (edtech_simulator)
-- Grafana on port 3000
-- Airflow PostgreSQL (airflow_db)
+- PostgreSQL (`edtech_db`) on port `5432`
+- Simulator (`edtech_simulator`)
+- Grafana on port `3000`
+- Prometheus on port `9090`
+- Airflow metadata PostgreSQL (`airflow_db`)
 - Redis
-- Airflow Webserver on port 8080
-- Airflow Scheduler
+- Airflow webserver on port `8080`
+- Airflow scheduler
 
-## Stopping
+## Stop and remove services
 
 ```bash
 docker-compose down
 ```
 
-To remove volumes (⚠️ deletes data):
+To remove volumes (data will be deleted):
 
 ```bash
 docker-compose down -v

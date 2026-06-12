@@ -1,42 +1,28 @@
 # Terraform AWS Deployment
 
-This directory contains Terraform configuration for provisioning the EdTech stream automation infrastructure on AWS using EC2.
+This directory contains Terraform configuration for provisioning the EdTech Stream Automation stack on AWS using EC2.
 
 ## Prerequisites
 
-- AWS account with appropriate credentials configured
+- AWS account with credentials configured
 - Terraform 1.5 or later
-- AWS CLI configured with credentials
+- AWS CLI configured
 
 ```bash
 aws configure
 ```
 
-## Architecture
+## What this deployment creates
 
-The Terraform configuration deploys:
+- **EC2 instance** running Ubuntu
+- **Security group** allowing SSH, PostgreSQL, Grafana, Airflow, and Prometheus ports
+- **IAM role** and instance profile
+- **Elastic IP** for a stable public address
+- **User data script** that bootstraps Docker, Docker Compose, and deploys the stack
 
-- **EC2 Instance**: Ubuntu 24.04 LTS (t3.medium by default)
-- **Security Group**: Allows SSH (22), PostgreSQL (5432), Grafana (3000), Airflow (8080), and Prometheus (9090)
-- **IAM Role**: For instance to access AWS services
-- **Elastic IP**: Static public IP for the instance
-- **User Data Script**: Bootstraps the instance with Docker and Docker Compose, then deploys the full stack
+## Important variables
 
-### Services Running on the Instance
-
-Once deployed, the following services run via Docker Compose inside the EC2 instance:
-
-- PostgreSQL (edtech_db + airflow_db)
-- Grafana dashboard
-- Apache Airflow (webserver + scheduler)
-- Redis cache
-- EdTech data simulator
-- Prometheus monitoring
-- Alerting system
-
-## Configuration Variables
-
-Create a `terraform.tfvars` file or export variables:
+Provide values by creating `terraform.tfvars` or exporting environment variables. Example values:
 
 ```hcl
 aws_region              = "us-east-1"
@@ -61,108 +47,44 @@ cd terraform
 terraform init
 ```
 
-### 2. Review the Deployment Plan
+### 2. Review the plan
 
 ```bash
 terraform plan
 ```
 
-This shows all resources that will be created on AWS.
-
-### 3. Deploy to AWS
+### 3. Apply the stack
 
 ```bash
 terraform apply
 ```
 
-**Note**: This will spin up an EC2 instance, so you will incur AWS charges. The user data script takes a few minutes to complete the deployment.
-
-### 4. Access the Services
-
-Once deployed, Terraform outputs will show the public IP and service URLs:
-
-```
-Outputs:
-instance_public_ip = "X.X.X.X"
-grafana_url = "http://X.X.X.X:3000"
-airflow_url = "http://X.X.X.X:8080"
-prometheus_url = "http://X.X.X.X:9090"
-postgres_connection_string = "postgres://..."
-```
-
-### 5. Verify Deployment Status
-
-SSH into the instance to check deployment progress:
-
-```bash
-ssh -i your-key-pair.pem ubuntu@<public-ip>
-```
-
-Check Docker Compose status:
-
-```bash
-docker-compose ps
-docker-compose logs
-```
-
-### 6. Destroy Resources
-
-When finished, remove all resources and stop AWS charges:
+### 4. Destroy the stack
 
 ```bash
 terraform destroy
 ```
 
-## Important Notes
+## Accessing services
 
-- **Initial Deployment**: The EC2 instance takes 3-5 minutes to fully bootstrap and deploy all services. Check `/var/log/edtech-deployment.log` on the instance for progress.
-- **Security**: The security group allows public access to all service ports. For production, restrict source IPs to your organization's IP ranges.
-- **Costs**: Running a t3.medium instance in us-east-1 typically costs ~$0.04/hour. Remember to destroy resources when not in use.
-- **SSH Access**: Ensure you have a valid EC2 key pair to SSH into the instance.
-- **Repository Access**: The user data script attempts to clone the repository. Ensure the GitHub repository is accessible from the EC2 instance.
+Terraform outputs include the public IP and service URLs, such as:
 
-## AWS Resources Created
+- Grafana: `http://<public-ip>:3000`
+- Airflow: `http://<public-ip>:8080`
+- Prometheus: `http://<public-ip>:9090`
 
-- `aws_instance`: EC2 instance running the application stack
-- `aws_security_group`: Network security configuration
-- `aws_eip`: Elastic IP for static public addressing
-- `aws_iam_role`: IAM role for EC2 instance
-- `aws_iam_instance_profile`: Instance profile linking the IAM role
-- `aws_iam_role_policy_attachment`: CloudWatch permissions for monitoring
+## Verification
 
-## Troubleshooting
-
-### Deployment Failed
-
-Check the user data logs on the instance:
+SSH into the instance and check Docker Compose status:
 
 ```bash
-ssh ubuntu@<public-ip>
-tail -f /var/log/edtech-deployment.log
-tail -f /var/log/cloud-init-output.log
-```
-
-### Services Not Starting
-
-SSH into the instance and check Docker Compose:
-
-```bash
+ssh -i your-key.pem ubuntu@<public-ip>
 docker-compose ps
-docker-compose logs -f
+docker-compose logs
 ```
 
-### Database Connection Issues
+## Notes
 
-Verify the Elastic IP is correctly associated:
-
-```bash
-terraform output instance_public_ip
-```
-
-## Next Steps
-
-- Customize instance type in `terraform.tfvars` (e.g., `t3.large` for more resources)
-- Add additional security group rules for specific IP ranges
-- Configure automated backups for persistent volumes
-- Set up Route53 DNS for your domain
-
+- Bootstrap may take several minutes to complete.
+- Security group rules are broad by default; restrict them for production use.
+- Destroy resources after use to avoid AWS charges.

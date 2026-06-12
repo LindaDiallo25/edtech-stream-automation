@@ -81,8 +81,8 @@ student_id | name     | classroom
 ```
 lesson_id | title                  | subject
 ----------|------------------------|------------------
-1         | Introduction à Docker  | DevOps
-2         | Maîtriser Airflow      | Data Engineering
+1         | Introduction to Docker | DevOps
+2         | Mastering Airflow      | Data Engineering
 ```
 
 ---

@@ -1,0 +1,26 @@
+[2026-06-12T11:17:44.796+0000] {taskinstance.py:1957} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: edtech_analytics.analyze_student_engagement scheduled__2026-06-11T00:00:00+00:00 [queued]>
+[2026-06-12T11:17:44.812+0000] {taskinstance.py:1957} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: edtech_analytics.analyze_student_engagement scheduled__2026-06-11T00:00:00+00:00 [queued]>
+[2026-06-12T11:17:44.814+0000] {taskinstance.py:2171} INFO - Starting attempt 1 of 2
+[2026-06-12T11:17:44.865+0000] {taskinstance.py:2192} INFO - Executing <Task(PythonOperator): analyze_student_engagement> on 2026-06-11 00:00:00+00:00
+[2026-06-12T11:17:44.882+0000] {standard_task_runner.py:60} INFO - Started process 302 to run task
+[2026-06-12T11:17:44.898+0000] {standard_task_runner.py:87} INFO - Running: ['***', 'tasks', 'run', 'edtech_analytics', 'analyze_student_engagement', 'scheduled__2026-06-11T00:00:00+00:00', '--job-id', '2', '--raw', '--subdir', 'DAGS_FOLDER/edtech_dag.py', '--cfg-path', '/tmp/tmpwukr4pd7']
+[2026-06-12T11:17:44.901+0000] {standard_task_runner.py:88} INFO - Job 2: Subtask analyze_student_engagement
+[2026-06-12T11:17:45.055+0000] {task_command.py:423} INFO - Running <TaskInstance: edtech_analytics.analyze_student_engagement scheduled__2026-06-11T00:00:00+00:00 [running]> on host d5c482e41ea7
+[2026-06-12T11:17:45.266+0000] {taskinstance.py:2481} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='edtech_team' AIRFLOW_CTX_DAG_ID='edtech_analytics' AIRFLOW_CTX_TASK_ID='analyze_student_engagement' AIRFLOW_CTX_EXECUTION_DATE='2026-06-11T00:00:00+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='scheduled__2026-06-11T00:00:00+00:00'
+[2026-06-12T11:17:45.269+0000] {logging_mixin.py:188} INFO - 📊 Analyse de l'engagement des étudiants en cours...
+[2026-06-12T11:17:45.287+0000] {logging_mixin.py:188} INFO - 
+📈 Répartition des étudiants par classe :
+[2026-06-12T11:17:45.287+0000] {logging_mixin.py:188} INFO -   - Data_2025: 26 étudiants
+[2026-06-12T11:17:45.287+0000] {logging_mixin.py:188} INFO -   - IA_2025: 25 étudiants
+[2026-06-12T11:17:45.288+0000] {logging_mixin.py:188} INFO -   - Cybersec_2025: 24 étudiants
+[2026-06-12T11:17:45.288+0000] {logging_mixin.py:188} INFO -   - Cloud_2025: 22 étudiants
+[2026-06-12T11:17:45.288+0000] {logging_mixin.py:188} INFO -   - GameDev_2025: 20 étudiants
+[2026-06-12T11:17:45.288+0000] {logging_mixin.py:188} INFO -   - DevOps_2025: 19 étudiants
+[2026-06-12T11:17:45.288+0000] {logging_mixin.py:188} INFO -   - Web_2025: 17 étudiants
+[2026-06-12T11:17:45.289+0000] {logging_mixin.py:188} INFO -   - Mobile_2025: 17 étudiants
+[2026-06-12T11:17:45.290+0000] {logging_mixin.py:188} INFO - 
+✅ Nombre total d'étudiants : 170
+[2026-06-12T11:17:45.291+0000] {python.py:201} INFO - Done. Returned value was: None
+[2026-06-12T11:17:45.314+0000] {taskinstance.py:1138} INFO - Marking task as SUCCESS. dag_id=edtech_analytics, task_id=analyze_student_engagement, execution_date=20260611T000000, start_date=20260612T111744, end_date=20260612T111745
+[2026-06-12T11:17:45.406+0000] {local_task_job_runner.py:234} INFO - Task exited with return code 0
+[2026-06-12T11:17:45.444+0000] {taskinstance.py:3281} INFO - 0 downstream tasks scheduled from follow-on schedule check

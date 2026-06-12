@@ -1,42 +1,35 @@
 # Prometheus Monitoring
 
-Prometheus is a time-series monitoring system that collects metrics from services and provides alerting capabilities.
+This directory contains Prometheus configuration for the EdTech Stream Automation platform.
 
-## Configuration
+## Files
 
-- **prometheus.yml**: Main Prometheus configuration file with scrape configs for:
-  - Prometheus self-monitoring
-  - PostgreSQL metrics (via postgres_exporter)
-  - Node metrics (via node_exporter)
-  - Airflow webserver health
-  - Docker daemon metrics
+- `prometheus.yml`: Main Prometheus configuration file
+- `alerts.yml`: Alerting rules for system health and service availability
 
-- **alerts.yml**: Alert rules for:
-  - PostgreSQL service health
-  - Connection and query count thresholds
-  - Airflow webserver availability
-  - DAG failures
-  - System resource usage (CPU, memory, disk)
+## Current configuration
+
+Prometheus is configured to scrape:
+- itself (`localhost:9090`)
+- Airflow webserver health metrics
+- PostgreSQL exporter metrics (if exporter is deployed)
+- Node exporter metrics (if exporter is deployed)
+- Docker daemon metrics (if exporter is deployed)
+
+> Note: The current `docker-compose.yaml` does not include `postgres_exporter`, `node_exporter`, or `unix_sock_stats_exporter` by default. Add exporter services to your compose setup if you want full database and host-level metrics.
 
 ## Access
 
-- **Prometheus UI**: `http://localhost:9090`
-- **Grafana with Prometheus datasource**: `http://localhost:3000`
-  - Included dashboard: "EdTech Prometheus Monitoring"
+- Prometheus UI: `http://localhost:9090`
+- Grafana UI: `http://localhost:3000`
 
-## Exporters
+## Grafana integration
 
-To enable full metric collection, you can add these exporters:
+Prometheus is configured as a datasource for Grafana, and dashboards can be loaded from `grafana/dashboards`.
 
-- **postgres_exporter**: Collects PostgreSQL metrics
-- **node_exporter**: Collects system metrics (CPU, memory, disk, network)
-- **docker-compose-exporter**: Collects Docker container metrics
+## Extend monitoring
 
-Add them to your docker-compose.yaml to expand monitoring capabilities.
-
-## Grafana Integration
-
-Prometheus is configured as a datasource in Grafana and includes a monitoring dashboard for:
-- Service status tracking
-- System CPU and memory usage
-- Prometheus health status
+To collect additional metrics, add exporter containers and update `prometheus/prometheus.yml` accordingly. For example:
+- `postgres_exporter` for PostgreSQL metrics
+- `node_exporter` for system metrics
+- `docker_exporter` or similar for Docker metrics

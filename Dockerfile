@@ -7,6 +7,5 @@ RUN apt-get update && apt-get install -y libpq-dev && rm -rf /var/lib/apt/lists/
 RUN pip install --no-cache-dir psycopg2-binary
 
 WORKDIR /app
-COPY scripts/edtech_simulator.py .
-
+COPY scripts/edtech_simulator.py ./scripts/edtech_simulator.py
 CMD ["python", "scripts/edtech_simulator.py"]
