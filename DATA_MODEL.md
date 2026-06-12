@@ -226,9 +226,263 @@ CREATE INDEX idx_students_classroom ON students(classroom);
 
 ---
 
-## 5. Data Dictionary
+## 5. Star Schema Design
 
-### 5.1 Attribute Definitions
+### 5.1 Star Schema Overview
+
+The EdTech data model follows a **star schema** design pattern, optimized for analytics and business intelligence queries. The star schema consists of:
+
+- **1 Fact Table:** `STREAMING_LOGS` (center of the star)
+- **2 Dimension Tables:** `STUDENTS`, `LESSONS` (points of the star)
+
+**Why Star Schema?**
+- ✅ Simplified queries: Easy denormalization for analytics
+- ✅ Query performance: Fewer JOINs required for common analytical queries
+- ✅ Intuitive structure: Dimensions describe WHO (students), WHAT (lessons), WHEN (time), and FACTS measure engagement
+- ✅ BI-friendly: Grafana, Tableau, and other BI tools work seamlessly with star schemas
+- ✅ OLAP optimization: Fast multidimensional analysis
+
+### 5.2 Fact Table: STREAMING_LOGS
+
+**Purpose:** Records individual streaming events (facts) of student engagement with lessons.
+
+**Type:** Transactional Fact Table (one row per event)
+
+**Characteristics:**
+- Contains foreign keys to dimension tables (student_id, lesson_id)
+- Contains quantitative measurements (watch_time_seconds, completion_percentage)
+- Each row represents a single observation/event
+- Grows incrementally with new streaming events (~1,000+ rows/day with simulator)
+
+**Fact Table Schema:**
+```
+┌─────────────────────────────┐
+│    STREAMING_LOGS (FACT)    │
+├─────────────────────────────┤
+│ log_id (PK)                │ ← Event surrogate key
+│ student_id (FK) ─────────┐  ← Link to student dimension
+│ lesson_id (FK) ──────────┼──┐← Link to lesson dimension
+│ event_timestamp (FK)    │  │ ← Link to time dimension (implicit)
+├─────────────────────────────┤
+│ watch_time_seconds    (Measure)
+│ completion_percentage (Measure)
+└─────────────────────────────┘
+```
+
+**Measures (Quantitative Facts):**
+
+| Measure | Type | Description | Aggregation |
+|---------|------|-------------|-------------|
+| `watch_time_seconds` | INTEGER | Duration student watched the lesson | SUM, AVG, MIN, MAX |
+| `completion_percentage` | INTEGER | Percentage of lesson completed | AVG, MIN, MAX, COUNT |
+| (implicit) count of events | COUNT | Number of streaming events | SUM |
+
+### 5.3 Dimension Table 1: STUDENTS
+
+**Purpose:** Provides context about WHO is learning.
+
+**Type:** Slowly Changing Dimension (SCD Type 1 - overwrite)
+
+**Characteristics:**
+- Describes attributes of students
+- Relatively small and stable (grows slowly)
+- Referenced by many fact table rows
+- Contains textual and categorical attributes
+
+**Dimension Schema:**
+```
+┌──────────────────────┐
+│   STUDENTS (DIM)     │
+├──────────────────────┤
+│ student_id (PK)     │ ← Dimension key
+├──────────────────────┤
+│ name                │ ← Attribute (who)
+│ classroom           │ ← Attribute (segmentation)
+└──────────────────────┘
+```
+
+**Dimensions (Descriptive Attributes):**
+
+| Dimension | Type | Description | Usage |
+|-----------|------|-------------|-------|
+| `student_id` | INTEGER | Student identifier | Primary key, foreign key reference |
+| `name` | VARCHAR(100) | Student's name | Filtering, grouping, display |
+| `classroom` | VARCHAR(50) | Class/cohort assignment | Segmentation, aggregation, comparison |
+
+**Example Analysis:**
+```sql
+-- "Which classroom has the highest average completion rate?"
+SELECT 
+    s.classroom,
+    AVG(sl.completion_percentage) as avg_completion_rate
+FROM students s
+JOIN streaming_logs sl ON s.student_id = sl.student_id
+GROUP BY s.classroom
+ORDER BY avg_completion_rate DESC;
+```
+
+### 5.4 Dimension Table 2: LESSONS
+
+**Purpose:** Provides context about WHAT is being learned.
+
+**Type:** Slowly Changing Dimension (SCD Type 1 - overwrite)
+
+**Characteristics:**
+- Describes attributes of lessons/content
+- Relatively small and stable
+- Referenced by many fact table rows
+- Contains textual and categorical attributes
+
+**Dimension Schema:**
+```
+┌──────────────────────┐
+│    LESSONS (DIM)     │
+├──────────────────────┤
+│ lesson_id (PK)      │ ← Dimension key
+├──────────────────────┤
+│ title               │ ← Attribute (what content)
+│ subject             │ ← Attribute (subject category)
+└──────────────────────┘
+```
+
+**Dimensions (Descriptive Attributes):**
+
+| Dimension | Type | Description | Usage |
+|-----------|------|-------------|-------|
+| `lesson_id` | INTEGER | Lesson identifier | Primary key, foreign key reference |
+| `title` | VARCHAR(200) | Lesson title/name | Filtering, display, reporting |
+| `subject` | VARCHAR(100) | Subject category | Segmentation, aggregation, comparison |
+
+**Example Analysis:**
+```sql
+-- "Which subject has the highest student engagement?"
+SELECT 
+    l.subject,
+    COUNT(DISTINCT sl.student_id) as unique_students,
+    COUNT(sl.log_id) as total_views,
+    AVG(sl.watch_time_seconds) as avg_watch_time
+FROM lessons l
+JOIN streaming_logs sl ON l.lesson_id = sl.lesson_id
+GROUP BY l.subject
+ORDER BY avg_watch_time DESC;
+```
+
+### 5.5 Implicit Time Dimension
+
+**Purpose:** Enables temporal analysis of student engagement.
+
+**Currently Implemented:** `event_timestamp` in STREAMING_LOGS
+
+**Future Enhancement (Optional):** Create explicit `DATE_DIMENSION` table for granular time slicing:
+```sql
+-- Future DATE_DIMENSION table structure
+CREATE TABLE date_dimension (
+    date_id SERIAL PRIMARY KEY,
+    full_date DATE,
+    year INT,
+    quarter INT,
+    month INT,
+    week INT,
+    day_of_month INT,
+    day_name VARCHAR(10),
+    is_weekend BOOLEAN
+);
+```
+
+### 5.6 Star Schema Visualization
+
+```
+                    ┌─────────────┐
+                    │  LESSONS    │
+                    │  (DIM)      │
+                    ├─────────────┤
+                    │ lesson_id   │
+                    │ title       │
+                    │ subject     │
+                    └────────┬────┘
+                             │
+                             │
+                    ┌────────▼────────┐
+                    │ STREAMING_LOGS  │
+                    │   (FACT)        │
+    ┌───────────────┤ ┌─────────────┐ ├───────────────┐
+    │               │ │ log_id      │ │               │
+    │               │ │ student_id◄─┼─┤               │
+    │               │ │ lesson_id◄──┤─┤               │
+    │               │ │ timestamp   │ │               │
+    │               │ │ watch_time  │ │               │
+    │               │ │ completion%│ │               │
+    │               │ └─────────────┘ │               │
+    │               └────────┬────────┘               │
+    │                        │                       │
+    │                        │                       │
+    ┌───────────────────────┘                       │
+    │                                                │
+┌───┴────────┐                            (Future)
+│  STUDENTS  │                          TIME_DIM
+│  (DIM)     │                         (Optional)
+├────────────┤
+│ student_id │
+│ name       │
+│ classroom  │
+└────────────┘
+```
+
+**Star Schema Benefits for This Diagram:**
+- Central `STREAMING_LOGS` fact table with all measurements
+- Direct links to `STUDENTS` and `LESSONS` dimensions
+- Minimal JOINs for common queries
+- Easy aggregation along multiple dimensions
+
+### 5.7 Typical Star Schema Queries
+
+**Query 1: Classroom Performance Over Time**
+```sql
+SELECT 
+    s.classroom,
+    DATE(sl.event_timestamp) as date,
+    COUNT(DISTINCT s.student_id) as active_students,
+    AVG(sl.completion_percentage) as avg_completion,
+    AVG(sl.watch_time_seconds) as avg_watch_time
+FROM students s
+JOIN streaming_logs sl ON s.student_id = sl.student_id
+GROUP BY s.classroom, DATE(sl.event_timestamp)
+ORDER BY s.classroom, date;
+```
+
+**Query 2: Subject Popularity Analysis**
+```sql
+SELECT 
+    l.subject,
+    l.title,
+    COUNT(sl.log_id) as total_views,
+    COUNT(DISTINCT sl.student_id) as unique_viewers,
+    AVG(sl.completion_percentage) as avg_completion
+FROM lessons l
+LEFT JOIN streaming_logs sl ON l.lesson_id = sl.lesson_id
+GROUP BY l.subject, l.title
+ORDER BY total_views DESC;
+```
+
+**Query 3: Student Engagement Metrics**
+```sql
+SELECT 
+    s.name,
+    s.classroom,
+    COUNT(sl.log_id) as lessons_watched,
+    SUM(sl.watch_time_seconds) as total_watch_time,
+    AVG(sl.completion_percentage) as avg_completion
+FROM students s
+LEFT JOIN streaming_logs sl ON s.student_id = sl.student_id
+GROUP BY s.student_id, s.name, s.classroom
+ORDER BY total_watch_time DESC;
+```
+
+---
+
+## 6. Data Dictionary
+
+### 6.1 Attribute Definitions
 
 | Entity | Attribute | Data Type | Domain | Nullable | Default |
 |--------|-----------|-----------|--------|----------|---------|
@@ -247,9 +501,9 @@ CREATE INDEX idx_students_classroom ON students(classroom);
 
 ---
 
-## 6. Business Rules
+## 7. Business Rules
 
-### 6.1 Data Integrity Rules
+### 7.1 Data Integrity Rules
 
 1. **Referential Integrity:**
    - A streaming log cannot reference a non-existent student
@@ -266,7 +520,7 @@ CREATE INDEX idx_students_classroom ON students(classroom);
    - Each `lesson_id` is unique
    - Each `log_id` is unique
 
-### 6.2 Business Logic Rules
+### 7.2 Business Logic Rules
 
 1. **Student Enrollment:**
    - Students are automatically assigned a unique ID upon enrollment
@@ -283,9 +537,9 @@ CREATE INDEX idx_students_classroom ON students(classroom);
 
 ---
 
-## 7. ER Diagram Visual Representations
+## 8. ER Diagram Visual Representations
 
-### 7.1 Text-Based ER Diagram
+### 8.1 Text-Based ER Diagram
 
 ```
 ┌─────────────────┐
@@ -321,7 +575,7 @@ CREATE INDEX idx_students_classroom ON students(classroom);
 └─────────────────────────────────┘
 ```
 
-### 7.2 Relationship Summary
+### 8.2 Relationship Summary
 
 ```
 STUDENTS (1) ────< (N) STREAMING_LOGS (N) >─── (1) LESSONS
@@ -334,9 +588,9 @@ STUDENTS (1) ────< (N) STREAMING_LOGS (N) >─── (1) LESSONS
 
 ---
 
-## 8. Sample Queries Demonstrating Relationships
+## 9. Sample Queries Demonstrating Relationships
 
-### 8.1 Query: Get all streaming events for a student
+### 9.1 Query: Get all streaming events for a student
 ```sql
 SELECT 
     s.name,
@@ -351,7 +605,7 @@ JOIN lessons l ON sl.lesson_id = l.lesson_id
 WHERE s.student_id = 1;
 ```
 
-### 8.2 Query: Get all students who viewed a lesson
+### 9.2 Query: Get all students who viewed a lesson
 ```sql
 SELECT 
     s.name,
@@ -364,7 +618,7 @@ JOIN students s ON sl.student_id = s.student_id
 WHERE l.lesson_id = 1;
 ```
 
-### 8.3 Query: Get classroom engagement statistics
+### 9.3 Query: Get classroom engagement statistics
 ```sql
 SELECT 
     s.classroom,
@@ -378,9 +632,9 @@ GROUP BY s.classroom;
 
 ---
 
-## 9. Data Model Characteristics
+## 10. Data Model Characteristics
 
-### 9.1 Normalization Level
+### 10.1 Normalization Level
 
 **Current Normalization:** Third Normal Form (3NF)
 
@@ -390,7 +644,7 @@ GROUP BY s.classroom;
 - ✅ No transitive dependencies
 - ✅ Each entity represents a single concept
 
-### 9.2 Data Volume Estimates
+### 10.2 Data Volume Estimates
 
 **STUDENTS:**
 - Estimated: 1,000 - 10,000 records
@@ -407,7 +661,7 @@ GROUP BY s.classroom;
 
 ---
 
-## 10. Conclusion
+## 11. Conclusion
 
 The data model follows a **star schema** pattern where:
 - **STUDENTS** and **LESSONS** are dimension tables

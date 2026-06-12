@@ -1,0 +1,78 @@
+groups:
+  - name: edtech_alerts
+    interval: 30s
+    rules:
+      # Database alerts
+      - alert: PostgreSQLDown
+        expr: up{job="postgres"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL is down"
+          description: "PostgreSQL has been down for more than 1 minute."
+
+      - alert: PostgreSQLHighConnections
+        expr: pg_stat_activity_count{job="postgres"} > 50
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL high connection count"
+          description: "PostgreSQL has over 50 active connections."
+
+      - alert: PostgreSQLSlowQueries
+        expr: pg_slow_queries{job="postgres"} > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL slow query count high"
+          description: "PostgreSQL has more than 10 slow queries in the last 5 minutes."
+
+      # Airflow alerts
+      - alert: AirflowWebserverDown
+        expr: up{job="airflow-webserver"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Airflow Webserver is down"
+          description: "Airflow Webserver has been unreachable for more than 2 minutes."
+
+      - alert: AirflowDAGFailure
+        expr: airflow_dag_status{status="failed"} > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Airflow DAG failure detected"
+          description: "An Airflow DAG has failed to complete."
+
+      # System alerts
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) > 0.85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is above 85%"
+
+      - alert: HighCPUUsage
+        expr: (100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage is above 80%"
+
+      - alert: DiskSpaceRunningOut
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low disk space"
+          description: "Less than 10% disk space available"

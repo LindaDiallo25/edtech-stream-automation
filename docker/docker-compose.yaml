@@ -13,7 +13,7 @@ services:
       POSTGRES_PASSWORD: password
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./sql/init_edtech.sql:/docker-entrypoint-initdb.d/init_edtech.sql
+      - ../sql/init_edtech.sql:/docker-entrypoint-initdb.d/init_edtech.sql
     networks:
       - edtech-network
     restart: always
@@ -42,8 +42,8 @@ services:
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     volumes:
-      - ./grafana/provisioning:/etc/grafana/provisioning
-      - ./grafana/dashboards:/var/lib/grafana/dashboards
+      - ../grafana/provisioning:/etc/grafana/provisioning
+      - ../grafana/dashboards:/var/lib/grafana/dashboards
     depends_on:
       - db
     networks:
@@ -57,8 +57,8 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-      - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml
+      - ../prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ../prometheus/alerts.yml:/etc/prometheus/alerts.yml
       - prometheus_data:/prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
@@ -67,7 +67,7 @@ services:
       - edtech-network
     restart: always
 
-  # 5. Base de dados PostgreSQL para Airflow (métadonnées)
+  # 5. Base de dados PostgreSQL pour Airflow (métadonnées)
   airflow_db:
     image: postgres:13
     container_name: airflow_db
@@ -107,9 +107,9 @@ services:
       - AIRFLOW__WEBSERVER__EXPOSE_CONFIG=true
       - _PIP_ADDITIONAL_REQUIREMENTS=psycopg2-binary
     volumes:
-      - ./dags:/opt/airflow/dags
-      - ./logs:/opt/airflow/logs
-      - ./plugins:/opt/airflow/plugins
+      - ../dags:/opt/airflow/dags
+      - ../logs:/opt/airflow/logs
+      - ../plugins:/opt/airflow/plugins
     ports:
       - "8080:8080"
     command: webserver
@@ -139,9 +139,9 @@ services:
       - AIRFLOW__API__AUTH_BACKENDS=airflow.api.auth.backend.basic_auth
       - _PIP_ADDITIONAL_REQUIREMENTS=psycopg2-binary
     volumes:
-      - ./dags:/opt/airflow/dags
-      - ./logs:/opt/airflow/logs
-      - ./plugins:/opt/airflow/plugins
+      - ../dags:/opt/airflow/dags
+      - ../logs:/opt/airflow/logs
+      - ../plugins:/opt/airflow/plugins
     command: scheduler
     networks:
       - edtech-network

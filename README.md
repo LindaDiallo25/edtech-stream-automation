@@ -1,16 +1,17 @@
 # EdTech Stream Automation
 
-A containerized data simulation and analytics platform for educational streaming activity. This repository includes a PostgreSQL-backed simulator, Grafana monitoring, and an Airflow analytics DAG.
+A containerized data simulation and analytics platform for educational streaming activity. This repository includes a PostgreSQL-backed simulator, Grafana monitoring, Prometheus alerting, Airflow analytics, and infrastructure provisioning.
 
 ## 🚀 What this project includes
 
-- **Python simulator** that creates student records and writes data into PostgreSQL
+- **Python simulator** that generates student streaming events and writes them to PostgreSQL
 - **PostgreSQL database** with `students`, `lessons`, and `streaming_logs` tables
 - **Grafana monitoring** configuration under `grafana/`
-- **Apache Airflow workflow** in `dags/edtech_dag.py` for daily analytics
+- **Prometheus** metric collection and alerting under `prometheus/`
+- **Apache Airflow** workflow in `dags/edtech_dag.py` for analytics and reporting
 - **Docker Compose** environment for local development and testing
-- **Terraform** local provisioning for the Docker stack
-- **Kubernetes deployment** manifest in `k8s-deployment.yaml`
+- **Terraform AWS** deployment example in `terraform/`
+- **Kubernetes** deployment manifest in `k8s-deployment.yaml`
 
 ## 📁 Repository structure
 
@@ -23,18 +24,34 @@ edtech-stream-automation/
 ├── Dockerfile
 ├── README.md
 ├── db-service.yaml
+├── docker/
+│   ├── Dockerfile
+│   ├── README.md
+│   └── docker-compose.yaml
 ├── docker-compose.yaml
-├── k8s-deployment.yaml
 ├── dags/
 │   └── edtech_dag.py
 ├── grafana/
 │   ├── dashboards/
 │   └── provisioning/
+├── k8s-deployment.yaml
 ├── logs/
+├── prometheus/
+│   ├── alerts.yml
+│   ├── prometheus.yml
+│   └── README.md
 ├── scripts/
 │   └── edtech_simulator.py
-└── sql/
-    └── init_edtech.sql
+├── sql/
+│   └── init_edtech.sql
+└── terraform/
+    ├── main.tf
+    ├── providers.tf
+    ├── variables.tf
+    ├── versions.tf
+    ├── outputs.tf
+    ├── user_data.sh
+    └── README.md
 ```
 
 ## 📋 Prerequisites
@@ -42,6 +59,7 @@ edtech-stream-automation/
 - Docker
 - Docker Compose
 - Terraform 1.5+ (local execution)
+- AWS CLI + credentials if using the Terraform AWS path
 - (Optional) Kubernetes and `kubectl`
 
 ## 🛠️ Local setup with Docker Compose
@@ -67,19 +85,21 @@ docker-compose ps
 
 ## 🌐 Services started by Docker Compose
 
-- `db`: PostgreSQL database for the EdTech dataset
-- `simulator`: Python simulator that inserts student records into PostgreSQL
+- `db`: PostgreSQL database for application data
+- `simulator`: Python simulator generating streaming events
 - `grafana`: Grafana dashboard service
 - `airflow_db`: PostgreSQL metadata database for Airflow
-- `redis`: Redis instance used by Airflow if needed
+- `redis`: Redis service used by Airflow
 - `airflow-webserver`: Airflow web UI on port `8080`
 - `airflow-scheduler`: Airflow scheduler running DAG tasks
+- `prometheus`: Prometheus monitoring service on port `9090`
 
 ## 🔌 Access endpoints
 
 - Grafana: `http://localhost:3000`
   - Admin password: `admin`
 - Airflow Webserver: `http://localhost:8080`
+- Prometheus: `http://localhost:9090`
 - PostgreSQL: `localhost:5432`
   - Database: `edtech_db`
   - User: `admin`
@@ -97,6 +117,7 @@ Defines the full local stack:
 - PostgreSQL database for application data
 - Python simulator container
 - Grafana dashboard
+- Prometheus monitoring
 - Airflow metadata database
 - Redis
 - Airflow webserver and scheduler
@@ -105,8 +126,8 @@ Defines the full local stack:
 
 The simulator script:
 - connects to PostgreSQL
-- inserts random student records every 5 seconds
-- uses hardcoded student names and classroom values
+- inserts student and streaming event records every 5 seconds
+- generates realistic watch time and completion percentages
 
 ### `dags/edtech_dag.py`
 
@@ -130,9 +151,9 @@ The SQL initialization script creates:
 - `lessons` with `lesson_id`, `title`, and `subject`
 - `streaming_logs` with references to `students` and `lessons`, plus watch time and completion percentage
 
-## 🧱 Local Terraform deployment
+## 🧱 Terraform deployment
 
-Terraform can provision the local Docker-based stack from the `terraform/` directory.
+Terraform can provision the AWS EC2-based stack from the `terraform/` directory.
 
 1. Initialize Terraform:
 
@@ -158,6 +179,8 @@ terraform apply
 ```bash
 terraform destroy
 ```
+
+> Note: The AWS Terraform path deploys a single Ubuntu EC2 instance, bootstraps Docker and Docker Compose, and deploys the full stack automatically.
 
 ## ☸️ Kubernetes deployment
 
@@ -192,12 +215,54 @@ Query the database:
 docker exec -it edtech_db psql -U admin -d edtech_db -c "SELECT COUNT(*) FROM students;"
 ```
 
-## 🧪 Notes
+Verify Prometheus targets:
 
-- `docker-compose.yaml` currently also mounts `./plugins` for Airflow, which is expected to be created by Docker if missing.
-- The simulator inserts students directly into `students`; the `streaming_logs` table is currently defined but populated only by future workflow enhancements.
+```bash
+curl http://localhost:9090/api/v1/targets
+```
+
+Verify Grafana datasource:
+
+```bash
+curl -u admin:admin http://localhost:3000/api/datasources
+```
+
+## 🧪 Deployment verification
+
+1. Confirm services are running:
+
+```bash
+docker-compose ps
+```
+
+2. Confirm metric scraping:
+
+```bash
+curl http://localhost:9090/api/v1/targets | jq '.data.activeTargets[] | {job: .labels.job, state: .health}'
+```
+
+3. Confirm dashboard access:
+
+- Grafana: `http://localhost:3000`
+- Prometheus: `http://localhost:9090`
+- Airflow: `http://localhost:8080`
+
+4. Confirm data ingestion:
+
+```bash
+docker exec -it edtech_db psql -U admin -d edtech_db -c "SELECT COUNT(*) FROM streaming_logs;"
+```
+
+## ⚠️ Notes
+
+- The `docker-compose.yaml` file mounts `./plugins` for Airflow and creates it if needed.
+- The simulator now generates both student records and streaming event data into `streaming_logs`.
+- Prometheus is configured with alert rules under `prometheus/alerts.yml`.
+- For production, restrict security access and avoid public exposure of service ports.
 
 ## 🤝 Contributing
+
+Contributions are welcome via issues and pull requests. Please open an issue first if you want to add new deployment paths, dashboards, or analytic workflows.
 
 Contributions are welcome. Open a pull request with improvements, bug fixes, or documentation updates.
 
